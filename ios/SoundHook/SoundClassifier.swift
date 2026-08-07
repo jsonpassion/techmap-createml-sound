@@ -53,6 +53,9 @@ final class SoundClassifier: NSObject, ObservableObject {
     /// 사용자가 분석을 원하는 상태인지. 슬라이더 조작으로 잠시 멈춘 것과 정지 버튼을 구분한다.
     private var wantsRunning = false
     private var restartWorkItem: DispatchWorkItem?
+    /// 정지 직후 completeAnalysis()가 마지막 버퍼를 흘려보내며 결과를 하나 더 만듭니다.
+    /// 그 결과가 화면에 남지 않도록 수신 여부를 따로 관리합니다.
+    private var acceptsResults = false
 
     override init() {
         // 요청을 한 번 만들어 내장 분류기의 정적 정보를 읽는다.
@@ -98,6 +101,7 @@ final class SoundClassifier: NSObject, ObservableObject {
 
     func stop() {
         wantsRunning = false
+        acceptsResults = false
         restartWorkItem?.cancel()
         restartWorkItem = nil
         results = []
@@ -144,6 +148,7 @@ final class SoundClassifier: NSObject, ObservableObject {
 
     /// 오디오 그래프만 정리한다. 세션과 사용자 의도는 그대로 둔다.
     private func teardownEngine() {
+        acceptsResults = false
         engine.inputNode.removeTap(onBus: 0)
         engine.stop()
         analyzer?.completeAnalysis()
@@ -187,7 +192,7 @@ final class SoundClassifier: NSObject, ObservableObject {
 
         let observer = ResultsObserver { [weak self] classifications in
             Task { @MainActor in
-                guard let self else { return }
+                guard let self, self.acceptsResults else { return }
                 self.analyzedWindows += 1
                 self.results = classifications
             }
@@ -209,6 +214,7 @@ final class SoundClassifier: NSObject, ObservableObject {
 
         engine.prepare()
         try engine.start()
+        acceptsResults = true
     }
 
     private static func rms(of buffer: AVAudioPCMBuffer) -> Double {

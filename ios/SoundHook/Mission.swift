@@ -28,7 +28,7 @@ enum MissionDeck {
         Mission(id: "singing", title: "노래", hint: "아무 멜로디나",
                 symbol: "music.microphone", identifiers: ["singing", "humming"], difficulty: 2),
         Mission(id: "cough", title: "기침", hint: "가볍게 두세 번",
-                symbol: "lungs.fill", identifiers: ["cough", "throat_clearing"], difficulty: 2),
+                symbol: "lungs.fill", identifiers: ["cough"], difficulty: 2),
         Mission(id: "finger_snapping", title: "손가락 튕기기", hint: "마이크 가까이서",
                 symbol: "hand.point.up.left.fill", identifiers: ["finger_snapping"], difficulty: 3),
         Mission(id: "knock", title: "노크", hint: "책상을 똑똑",

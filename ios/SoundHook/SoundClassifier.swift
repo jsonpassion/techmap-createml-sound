@@ -50,7 +50,9 @@ final class SoundClassifier: NSObject, ObservableObject {
     private var analyzer: SNAudioStreamAnalyzer?
     private var observer: ResultsObserver?
     private var inputFormat: AVAudioFormat?
-    private var isRestarting = false
+    /// 사용자가 분석을 원하는 상태인지. 슬라이더 조작으로 잠시 멈춘 것과 정지 버튼을 구분한다.
+    private var wantsRunning = false
+    private var restartWorkItem: DispatchWorkItem?
 
     override init() {
         // 요청을 한 번 만들어 내장 분류기의 정적 정보를 읽는다.
@@ -58,7 +60,10 @@ final class SoundClassifier: NSObject, ObservableObject {
         knownClassificationCount = probe?.knownClassifications.count ?? 0
         switch probe?.windowDurationConstraint {
         case .durationRange(let range):
-            windowDurationRange = CMTimeGetSeconds(range.start)...CMTimeGetSeconds(range.end)
+            // 상한이 15.0000625처럼 딱 떨어지지 않으면 슬라이더 눈금이 어긋난다.
+            let lower = (CMTimeGetSeconds(range.start) * 4).rounded(.up) / 4
+            let upper = (CMTimeGetSeconds(range.end) * 4).rounded(.down) / 4
+            windowDurationRange = lower...upper
         case .enumeratedDurations(let durations):
             let seconds = durations.map(CMTimeGetSeconds)
             windowDurationRange = (seconds.min() ?? 0.5)...(seconds.max() ?? 15)
@@ -71,12 +76,15 @@ final class SoundClassifier: NSObject, ObservableObject {
     // MARK: 제어
 
     func start() {
+        wantsRunning = true
         guard !isRunning else { return }
         Task {
             guard await requestPermission() else {
                 statusMessage = "마이크 권한이 거부되었습니다"
                 return
             }
+            // 권한 대기 중에 정지 버튼을 눌렀다면 시작하지 않는다.
+            guard wantsRunning else { return }
             do {
                 try configureSession()
                 try startEngine()
@@ -89,7 +97,15 @@ final class SoundClassifier: NSObject, ObservableObject {
     }
 
     func stop() {
-        guard isRunning || engine.isRunning else { return }
+        wantsRunning = false
+        restartWorkItem?.cancel()
+        restartWorkItem = nil
+        results = []
+        guard isRunning || engine.isRunning else {
+            isRunning = false
+            statusMessage = "정지됨"
+            return
+        }
         engine.inputNode.removeTap(onBus: 0)
         engine.stop()
         analyzer?.completeAnalysis()
@@ -105,15 +121,37 @@ final class SoundClassifier: NSObject, ObservableObject {
         analyzedWindows = 0
     }
 
+    /// 슬라이더를 드래그하는 동안 파이프라인을 매 단계 재구성하면 입력이 끊긴다.
+    /// 마지막 변경으로부터 잠시 기다렸다가 한 번만 다시 만든다.
     private func restartIfNeeded() {
-        guard isRunning, !isRestarting else { return }
-        isRestarting = true
-        stop()
-        // 파라미터를 바꾸면 요청과 분석기를 새로 만든다.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
-            self?.isRestarting = false
-            self?.start()
+        guard isRunning || wantsRunning else { return }
+        restartWorkItem?.cancel()
+        teardownEngine()
+        statusMessage = "파라미터 적용 중"
+        let work = DispatchWorkItem { [weak self] in
+            guard let self, self.wantsRunning else { return }
+            do {
+                try self.startEngine()
+                self.isRunning = true
+                self.statusMessage = "분석 중"
+            } catch {
+                self.statusMessage = "재시작 실패: \(error.localizedDescription)"
+            }
         }
+        restartWorkItem = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35, execute: work)
+    }
+
+    /// 오디오 그래프만 정리한다. 세션과 사용자 의도는 그대로 둔다.
+    private func teardownEngine() {
+        engine.inputNode.removeTap(onBus: 0)
+        engine.stop()
+        analyzer?.completeAnalysis()
+        analyzer = nil
+        observer = nil
+        isRunning = false
+        level = 0
+        results = []
     }
 
     // MARK: 파이프라인

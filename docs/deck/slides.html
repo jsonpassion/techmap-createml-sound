@@ -739,6 +739,63 @@ if classification.confidence &gt; 0.85 { smoother.add(classification.identifier)
       <div class="foot"><span>CreateML 스터디 · 4주차 · Sound Classification</span><span>28</span></div>
     </section>
 
+    <section class="slide">
+      
+  <div class="kicker"><b></b>CASE, CLAPPING DETECTION</div>
+  <h1>박수 감지 하나를 끝까지 따라가 봅니다</h1>
+  
+      <div class="mid">
+        <div class="grid g4">
+          
+            <div class="card ">
+              <div class="eyebrow">1, 무엇을 잡을까</div>
+              <b class="sm">clapping</b>
+              <p>내장 분류기가 이미 아는 레이블입니다. applause도 같이 인정하면 한 명이 치든 다 같이 치든 잡힙니다.</p>
+            </div>
+            <div class="card ">
+              <div class="eyebrow">2, 윈도를 줄인다</div>
+              <b class="sm">1.5초 → 0.75초</b>
+              <p>박수는 0.1초짜리 소리입니다. 3초 윈도 안에서는 주변 소음에 묻혀 확률이 오르지 않습니다.</p>
+            </div>
+            <div class="card hi">
+              <div class="eyebrow">3, 임계값을 정한다</div>
+              <b class="sm">0.45</b>
+              <p>한 번의 박수로도 넘도록 낮게 잡았습니다. 오탐이 늘면 올리고, 연속 판정을 함께 겁니다.</p>
+            </div>
+            <div class="card ">
+              <div class="eyebrow">4, 무엇에 쓸까</div>
+              <b class="sm">점수와 진동</b>
+              <p>SoundHook은 성공 처리와 햅틱으로 씁니다. 여러분 앱에서는 화면 전환이나 카운트가 되겠지요.</p>
+            </div>
+        </div>
+        <p class="punch">레이블 하나를 고르고, 윈도를 맞추고, 임계값을 정하는 것. 사운드 기능 하나는 이 세 줄이 전부입니다.</p>
+      </div>
+      <div class="foot"><span>CreateML 스터디 · 4주차 · Sound Classification</span><span>29</span></div>
+    </section>
+
+    <section class="slide">
+      
+  <div class="kicker"><b></b>CASE, CLAPPING DETECTION</div>
+  <h1>SoundHook의 박수 감지, 실제 코드입니다</h1>
+  
+      <div class="mid split wide">
+        <pre>// 1, 미션 정의, 인정할 레이블을 묶습니다
+Mission(id: "clapping", title: "박수", hint: "손뼉을 리듬 있게",
+        identifiers: ["clapping", "applause"], difficulty: 1)
+
+// 2, 분류 결과에서 그 레이블만 골라 최대 확률을 봅니다
+let matched = results
+    .filter { mission.identifiers.contains($0.identifier) }
+    .map(\.confidence).max() ?? 0
+
+// 3, 목표를 넘으면 그 자리에서 성공 처리합니다
+progress = min(matched / targetConfidence, 1)
+if matched &gt;= targetConfidence { endRound(cleared: true) }</pre>
+        <div class="card"><b>여기서 배울 것</b><p>박수 감지에 필요한 코드는 이게 전부입니다. 학습도, 모델 파일도 없습니다.<br><br>바꾸고 싶은 소리가 생기면 identifiers만 갈아 끼우면 됩니다. 내장 분류기가 모르는 소리일 때, 그때 비로소 Create ML이 필요합니다.</p></div>
+      </div>
+      <div class="foot"><span>CreateML 스터디 · 4주차 · Sound Classification</span><span>30</span></div>
+    </section>
+
     <section class="slide dark round">
       <div class="mid">
         <div class="kicker plain">ROUND</div>
@@ -748,7 +805,7 @@ if classification.confidence &gt; 0.85 { smoother.add(classification.identifier)
         </div>
       </div>
       <div class="wave low"><i style="height:35%" class=""></i><i style="height:60%" class="on"></i><i style="height:90%" class=""></i><i style="height:100%" class=""></i><i style="height:72%" class="on"></i><i style="height:100%" class=""></i><i style="height:80%" class=""></i><i style="height:50%" class="on"></i><i style="height:75%" class=""></i><i style="height:42%" class=""></i><i style="height:30%" class="on"></i></div>
-      <div class="foot"><span>CreateML 스터디 · 4주차 · Sound Classification</span><span>29</span></div>
+      <div class="foot"><span>CreateML 스터디 · 4주차 · Sound Classification</span><span>31</span></div>
     </section>
 
     <section class="slide dark">
@@ -782,7 +839,7 @@ if classification.confidence &gt; 0.85 { smoother.add(classification.identifier)
         </div>
         <p class="punch">모델은 Create ML로 15분 — 나머지는 여러분의 바이브 코딩. 다음 미팅 팀 공유 시간에 시연합니다.</p>
       </div>
-      <div class="foot"><span>CreateML 스터디 · 4주차 · Sound Classification</span><span>30</span></div>
+      <div class="foot"><span>CreateML 스터디 · 4주차 · Sound Classification</span><span>32</span></div>
     </section>
 
     <section class="slide word"><div class="big ">결론</div></section>
@@ -802,7 +859,7 @@ if classification.confidence &gt; 0.85 { smoother.add(classification.identifier)
       </div>
       <p class="punch">가이드 웹 튜토리얼 — 오늘 내용 전체 + 분석 윈도 시뮬레이터 + 데모 앱 소스 (링크 공유)</p>
       <div class="wave corner"><i style="height:35%" class=""></i><i style="height:60%" class="on"></i><i style="height:90%" class=""></i><i style="height:100%" class=""></i><i style="height:72%" class="on"></i><i style="height:100%" class=""></i><i style="height:80%" class=""></i><i style="height:50%" class="on"></i><i style="height:75%" class=""></i><i style="height:42%" class=""></i></div>
-      <div class="foot"><span>CreateML 스터디 · 4주차 · Sound Classification</span><span>31</span></div>
+      <div class="foot"><span>CreateML 스터디 · 4주차 · Sound Classification</span><span>33</span></div>
     </section>
 </div>
 <div id="hud"><span style="opacity:.6">← → 이동</span><span id="counter"></span></div>

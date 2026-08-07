@@ -3,3 +3,6 @@ ios/build/
 *.xcuserdatad
 xcuserdata/
 datasets/
+deck/
+ios/
+docs/deck/
